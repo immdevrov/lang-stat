@@ -1,0 +1,7 @@
+.helm/
+.husky/
+nginx
+scripts
+node_modules
+.yarn
+

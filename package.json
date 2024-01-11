@@ -1,0 +1,14 @@
+{
+  "name": "lang-stat",
+  "version": "0.0.1",
+  "description": "hello world",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "npx --yes oxlint@latest",
+    "prettier": "npx prettier . --write"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC"
+}
