@@ -9,21 +9,23 @@ const [_nodePath, _scriptPath, GITHUB_API_TOKEN] = argv
 async function makeRequest(options) {
   return new Promise((resolve, reject) => {
     let data = ''
-    https.get(options, (res) => {
-      res.setEncoding('utf8')
+    https
+      .get(options, (res) => {
+        res.setEncoding('utf8')
 
-      res.on('data', (d) => {
-        data += d
-      })
+        res.on('data', (d) => {
+          data += d
+        })
 
-      res.on('end', () => {
-        resolve(data)
-      })
+        res.on('end', () => {
+          resolve(data)
+        })
 
-      res.on('error', (e) => {
-        reject(e)
+        res.on('error', (e) => {
+          reject(e)
+        })
+
       })
-    })
   })
 }
 
