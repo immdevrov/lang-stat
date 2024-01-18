@@ -29,16 +29,19 @@ async function makeRequest(options) {
   })
 }
 
-const data = await makeRequest({
-  host: 'api.github.com',
-  path: '/octocat',
-  method: 'GET',
-  headers: {
+const HEADERS = {
     Authorization: `Bearer ${GITHUB_API_TOKEN}`,
     Accept: 'application/vnd.github+json',
     'User-Agent': 'lang-stat-app',
     'X-GitHub-Api-Version': '2022-11-28',
-  },
+}
+
+const data = await makeRequest({
+  host: 'api.github.com',
+  path: '/organizations?per_page=3',
+  method: 'GET',
+  headers: HEADERS,
 })
 
-console.log(data)
+const orgs = JSON.parse(data)
+console.log(orgs.map(({ login, id}) => ({ login, id })))
