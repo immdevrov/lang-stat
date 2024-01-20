@@ -2,11 +2,15 @@ import { argv } from 'node:process'
 import https from 'node:https'
 
 const [_nodePath, _scriptPath, GITHUB_API_TOKEN] = argv
-
+let requestsNumber = 0
 /**
  * @param {https.RequestOptions} options
  */
 async function makeRequest(options) {
+  requestsNumber++
+  if (requestsNumber > 5000) {
+    throw new Error('Exceed api rate limit!')
+  }
   return new Promise((resolve, reject) => {
     let data = ''
     https
@@ -36,12 +40,71 @@ const HEADERS = {
     'X-GitHub-Api-Version': '2022-11-28',
 }
 
-const data = await makeRequest({
-  host: 'api.github.com',
-  path: '/organizations?per_page=3',
-  method: 'GET',
-  headers: HEADERS,
+async function getOrgs() {
+  const data = await makeRequest({
+    host: 'api.github.com',
+    path: '/organizations?per_page=100',
+    method: 'GET',
+    headers: HEADERS,
+  })
+
+  const orgs = JSON.parse(data)
+  return orgs.map(({ login, id, repos_url }) => ({ login, id, repos_url }))
+}
+
+async function getUsers() {
+  const data = await makeRequest({
+    host: 'api.github.com',
+    path: '/users?per_page=100',
+    method: 'GET',
+    headers: HEADERS,
+  })
+
+  const users = JSON.parse(data)
+  return users.map(({ login, id, repos_url }) => ({ login, id, repos_url }))
+}
+
+async function getRepositories(users, orgs) {
+  const urlList = [
+    ...users.map(i => i.repos_url),
+    ...orgs.map(i => i.repos_url),
+  ]
+  const promises = urlList.map(url => makeRequest({
+    host: 'api.github.com',
+    path: `${url.replace('https://api.github.com', '')}?per_page=100`,
+    method: 'GET',
+    headers: HEADERS,
+  }))
+  const dataList = await Promise.all(promises)
+  return dataList.map(d => JSON.parse(d)).flat()
+}
+
+async function getLanguages(urlList) {
+  const dataList = await Promise.all(urlList.map(url => makeRequest({
+    host: 'api.github.com',
+    path: `${url.replace('https://api.github.com', '')}?per_page=100`,
+    method: 'GET',
+    headers: HEADERS,
+  })))
+
+  return dataList.map(d => JSON.parse(d))
+}
+const orgs = await getOrgs()
+const users = await getUsers()
+const repos = await getRepositories(users, orgs)
+const languages = await getLanguages(repos.map(r => r.languages_url))
+const langStat = {}
+languages.forEach(r => {
+  Object.entries(r).forEach(([language, size]) => {
+    if (!language || !size) { return }
+
+    if (langStat[language]) {
+      langStat[language] += size
+    } else {
+      langStat[language] = size
+    }
+  })
 })
 
-const orgs = JSON.parse(data)
-console.log(orgs.map(({ login, id}) => ({ login, id })))
+console.log(Object.entries(langStat).sort((a, b) => b[1] - a[1]))
+console.log(`requests: ${requestsNumber}`)
