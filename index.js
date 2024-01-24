@@ -89,22 +89,50 @@ async function getLanguages(urlList) {
 
   return dataList.map(d => JSON.parse(d))
 }
-const orgs = await getOrgs()
-const users = await getUsers()
-const repos = await getRepositories(users, orgs)
-const languages = await getLanguages(repos.map(r => r.languages_url))
-const langStat = {}
-languages.forEach(r => {
-  Object.entries(r).forEach(([language, size]) => {
-    if (!language || !size) { return }
 
-    if (langStat[language]) {
-      langStat[language] += size
-    } else {
-      langStat[language] = size
-    }
+async function doStuff() {
+  const orgs = await getOrgs()
+  const users = await getUsers()
+  const repos = await getRepositories(users, orgs)
+  const languages = await getLanguages(repos.map(r => r.languages_url))
+  const langStat = {}
+  languages.forEach(r => {
+    Object.entries(r).forEach(([language, size]) => {
+      if (!language || !size) { return }
+
+      if (langStat[language]) {
+        langStat[language] += size
+      } else {
+        langStat[language] = size
+      }
+    })
   })
-})
+  console.log(Object.entries(langStat).sort((a, b) => b[1] - a[1]))
+}
 
-console.log(Object.entries(langStat).sort((a, b) => b[1] - a[1]))
-console.log(`requests: ${requestsNumber}`)
+class Queue {
+  state = []
+
+  constructor(initialState = []) {
+    this.state = initialState
+  }
+
+  push(item) {
+    this.state.push(item)
+  }
+
+  process = function* () {
+    while (this.state.length) {
+      const [head, ...tail] = this.state
+      this.state = tail ?? []
+      yield head
+    }
+  }
+}
+
+const q = new Queue(GITHUB_API_TOKEN.split(''))
+
+for (const item of q.process()) {
+  console.log(item)
+}
+
